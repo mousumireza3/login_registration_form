@@ -1,5 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:registration_form/screens/home_screen.dart';
+import 'package:registration_form/screens/phoneNoVerification_screen.dart';
 import 'package:registration_form/screens/registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,6 +20,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = new TextEditingController();
   final TextEditingController passwordController = new TextEditingController();
 
+  // Firebase
+  final _auth = FirebaseAuth.instance;
+
   @override
   Widget build(BuildContext context) {
     // email field
@@ -30,7 +36,18 @@ class _LoginScreenState extends State<LoginScreen> {
           hintText: "Email",
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
 
-      // validator : (){}
+      // validator
+      validator: (value) {
+        if (value!.isEmpty) {
+          return ("Please enter your email");
+        }
+
+        // regular expression for email validation
+        if (!RegExp("^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+.[a-z]").hasMatch(value)) {
+          return ("Please enter a valid email");
+        }
+        return null;
+      },
       onSaved: (value) {
         emailController.text = value!;
       },
@@ -48,7 +65,17 @@ class _LoginScreenState extends State<LoginScreen> {
           hintText: "Password",
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
 
-      // validator : (){}
+      // validator
+
+      validator: (value) {
+        RegExp regex = new RegExp(r'^.{6,}$');
+        if (value!.isEmpty) {
+          return ("Password is required for login");
+        }
+        if (!regex.hasMatch(value)) {
+          return ("Enter valid password (Min. 6 Character)");
+        }
+      },
       onSaved: (value) {
         passwordController.text = value!;
       },
@@ -64,8 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: EdgeInsets.fromLTRB(20, 15, 20, 15),
           minWidth: MediaQuery.of(context).size.width,
           onPressed: () {
-            Navigator.pushReplacement(
-                context, MaterialPageRoute(builder: (context) => HomeScreen()));
+            signIn(emailController.text, passwordController.text);
           },
           child: Text(
             "Login",
@@ -94,7 +120,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     passwordField,
                     SizedBox(height: 35),
                     loginButton,
-                    SizedBox(height: 15),
+                    SizedBox(height: 35),
+                    // PhoneNumberVerification(),
+                    GestureDetector(
+                      child: Text(
+                        "OR Verify Phone Number",
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      onTap: () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (context) => PhoneNumberVerification()));
+                      },
+                    ),
+                    SizedBox(height: 25),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -116,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         )
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -125,5 +164,23 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  // Login Function
+  void signIn(String email, String password) async {
+    if (_formKey.currentState!.validate()) {
+      await _auth
+          .signInWithEmailAndPassword(email: email, password: password)
+          .then((uid) => {
+                Fluttertoast.showToast(msg: "Login Successful"),
+                // Navigator.of(context).pushReplacement(
+                //     MaterialPageRoute(builder: (context) => HomeScreen())),
+                Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (context) => HomeScreen()))
+              })
+          .catchError((e) {
+        Fluttertoast.showToast(msg: e!.message);
+      });
+    }
   }
 }
